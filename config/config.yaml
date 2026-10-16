@@ -1,0 +1,100 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Configuración del QA de Datamatch (Dataplor vs POS del cliente)
+# Las rutas relativas se resuelven contra la raíz del proyecto.
+# ─────────────────────────────────────────────────────────────────────────────
+
+project:
+  client: CentroPacifico          # se usa en el nombre de los archivos de salida
+  country: Mexico
+  run_date: null         # YYYYMMDD; null = fecha de hoy
+
+paths:
+  datamatch: data/raw/centro_pacifico/final_output.csv   # salida cruda del matcher (columnas *.c / *.o)
+  clients: data/raw/centro_pacifico/centro_pacifico.csv              # base de clientes POS
+  output_dir: data/output/centro_pacifico
+
+thresholds:
+  match: 0.71            # total_score < match  -> no_match (paso 1 del flujo)
+  super_match: 0.80      # total_score >= super_match -> super_match = True
+  explore:               # reporte HTML para elegir thresholds a ojo
+    start: 0.95
+    stop: 0.40
+    step: 0.05
+    sample_size: 10      # registros más marginales que se muestran por threshold
+
+# Gráficos y escenarios para elegir el threshold (`explore`)
+analysis:
+  bucket_width: 0.05          # tamaño de bucket para muestreo y precisión
+  sample_per_bucket: 20       # registros por bucket en review_sample_*.csv
+  seed: 42
+  labels: null                # CSV etiquetado (dataplor_id, is_match=1/0); p.ej. data/raw/review_labels.csv
+  target_precision_match: 0.90
+  target_precision_super: 0.98
+
+# Rescate de no_match: mismo nombre normalizado + distancia corta a un cliente POS
+name_match:
+  enabled: true
+  max_distance_m: 100
+  unique_pos: true       # un pos_id solo puede rescatar a un dataplor_id (el más cercano)
+
+columns:
+  score: total_score
+  # Matcher (crudo) -> nombres finales
+  rename:
+    id.c: dataplor_id
+    name.c: dataplor_name
+    address.c: dataplor_address
+    latitude.c: dataplor_latitude
+    longitude.c: dataplor_longitude
+    id.o: pos_id
+    name.o: pos_name
+    address.o: pos_address
+    latitude.o: pos_latitude
+    longitude.o: pos_longitude
+  # Columnas en la base de clientes POS
+  clients:
+    id: ID
+    name: NombreCliente
+    latitude: Coord_Y
+    longitude: Coord_X
+  # Columnas visibles en el reporte de thresholds
+  display:
+    - dataplor_name
+    - pos_name
+    - dataplor_address
+    - distance_score
+    - name_score
+    - address_score
+    - phonetic_score
+    - total_score
+    - distance
+
+outputs:
+  final_columns:
+    - dataplor_id
+    - dataplor_name
+    - dataplor_address
+    - dataplor_latitude
+    - dataplor_longitude
+    - pos_id
+    - pos_name
+    - pos_latitude
+    - pos_longitude
+    - distance_score
+    - name_score
+    - address_score
+    - phonetic_score
+    - total_score
+    - super_match
+    - match_no_match
+    - match_source
+    - name_match_distance_m
+  latlon_columns:
+    - dataplor_id
+    - dataplor_name
+    - dataplor_address
+    - dataplor_latitude
+    - dataplor_longitude
+    - match_no_match
+  write_latlon: true
+  write_split: true      # match.csv / no_match.csv
